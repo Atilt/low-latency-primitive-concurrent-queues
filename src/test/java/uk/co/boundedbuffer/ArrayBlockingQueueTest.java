@@ -12,13 +12,13 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
 
     public static class Fair extends BlockingQueueTest {
         protected BlockingQueue emptyCollection() {
-            return new ConcurrentBlockingObjectQueue(SIZE, true);
+            return new ConcurrentBlockingObjectQueue(SIZE);
         }
     }
 
     public static class NonFair extends BlockingQueueTest {
         protected BlockingQueue emptyCollection() {
-            return new ConcurrentBlockingObjectQueue(SIZE, false);
+            return new ConcurrentBlockingObjectQueue(SIZE);
         }
     }
 
@@ -60,7 +60,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
      */
     public void testConstructor3() {
         try {
-            new ConcurrentBlockingObjectQueue(1, true, null);
+            new ConcurrentBlockingObjectQueue(1);
             shouldThrow();
         } catch (NullPointerException success) {
         }
@@ -72,7 +72,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
     public void testConstructor4() {
         Collection<Integer> elements = Arrays.asList(new Integer[SIZE]);
         try {
-            new ConcurrentBlockingObjectQueue(SIZE, false, elements);
+            new ConcurrentBlockingObjectQueue(SIZE);
             shouldThrow();
         } catch (NullPointerException success) {
         }
@@ -87,7 +87,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
             ints[i] = i;
         Collection<Integer> elements = Arrays.asList(ints);
         try {
-            new ConcurrentBlockingObjectQueue(SIZE, false, Arrays.asList(ints));
+            new ConcurrentBlockingObjectQueue(SIZE);
             shouldThrow();
         } catch (NullPointerException success) {
         }
@@ -102,7 +102,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
             ints[i] = i;
         Collection<Integer> elements = Arrays.asList(ints);
         try {
-            new ConcurrentBlockingObjectQueue(SIZE - 1, false, elements);
+            new ConcurrentBlockingObjectQueue(SIZE - 1);
             shouldThrow();
         } catch (IllegalArgumentException success) {
         }
@@ -116,7 +116,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
         for (int i = 0; i < SIZE; ++i)
             ints[i] = i;
         Collection<Integer> elements = Arrays.asList(ints);
-        ConcurrentBlockingObjectQueue q = new ConcurrentBlockingObjectQueue(SIZE, true, elements);
+        ConcurrentBlockingObjectQueue q = new ConcurrentBlockingObjectQueue(SIZE);
         for (int i = 0; i < SIZE; ++i)
             assertEquals(ints[i], q.poll());
     }
@@ -252,7 +252,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
     /**
      * put blocks interruptibly if full
      */
-    public void testBlockingPut() throws InterruptedException {
+    public void testBlockingPut() {
         final ConcurrentBlockingObjectQueue q = new ConcurrentBlockingObjectQueue(SIZE);
         final CountDownLatch pleaseInterrupt = new CountDownLatch(1);
         Thread t = newStartedThread(new CheckedRunnable() {
@@ -327,7 +327,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
     /**
      * timed offer times out if full and elements not taken
      */
-    public void testTimedOffer() throws InterruptedException {
+    public void testTimedOffer() {
         final ConcurrentBlockingObjectQueue q = new ConcurrentBlockingObjectQueue(2);
         final CountDownLatch pleaseInterrupt = new CountDownLatch(1);
         Thread t = newStartedThread(new CheckedRunnable() {
@@ -338,11 +338,8 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
                 assertFalse(q.offer(new Object(), timeoutMillis(), MILLISECONDS));
                 assertTrue(millisElapsedSince(startTime) >= timeoutMillis());
                 pleaseInterrupt.countDown();
-                try {
-                    q.offer(new Object(), 2 * LONG_DELAY_MS, MILLISECONDS);
-                    shouldThrow();
-                } catch (InterruptedException success) {
-                }
+                q.offer(new Object(), 2 * LONG_DELAY_MS, MILLISECONDS);
+                shouldThrow();
             }
         });
 
@@ -365,7 +362,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
     /**
      * Take removes existing elements until empty, then blocks interruptibly
      */
-    public void testBlockingTake() throws InterruptedException {
+    public void testBlockingTake() {
         final ConcurrentBlockingObjectQueue q = populatedQueue(SIZE);
         final CountDownLatch pleaseInterrupt = new CountDownLatch(1);
         Thread t = newStartedThread(new CheckedRunnable() {
@@ -375,19 +372,13 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
                 }
 
                 Thread.currentThread().interrupt();
-                try {
-                    q.take();
-                    shouldThrow();
-                } catch (InterruptedException success) {
-                }
+                q.take();
+                shouldThrow();
                 assertFalse(Thread.interrupted());
 
                 pleaseInterrupt.countDown();
-                try {
-                    q.take();
-                    shouldThrow();
-                } catch (InterruptedException success) {
-                }
+                q.take();
+                shouldThrow();
                 assertFalse(Thread.interrupted());
             }
         });
@@ -823,7 +814,7 @@ public class ArrayBlockingQueueTest extends JSR166TestCase {
     /**
      * A deserialized serialized queue has same elements in same order
      */
-    public void testSerialization() throws Exception {
+    public void testSerialization() {
         Queue x = populatedQueue(SIZE);
         Queue y = serialClone(x);
 

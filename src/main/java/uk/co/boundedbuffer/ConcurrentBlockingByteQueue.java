@@ -51,21 +51,21 @@ import java.util.concurrent.TimeoutException;
  * <td>{@link #add add(e)}</td>
  * <td>{@link #offer offer(e)}</td>
  * <td>{@link #put put(e)}</td>
- * <td>{@link #offer(byte, long, java.util.concurrent.TimeUnit) offer(e, time, unit)}</td>
+ * <td>{@link #offer(byte, long, TimeUnit) offer(e, time, unit)}</td>
  * </tr>
  * <tr>
  * <td><b>Remove</b></td>
  * <td>{@link #poll poll()}</td>
  * <td>not applicable</td>
  * <td>{@link #take long()}</td>
- * <td>{@link #poll(long, java.util.concurrent.TimeUnit) poll(time, unit)}</td>
+ * <td>{@link #poll(long, TimeUnit) poll(time, unit)}</td>
  * </tr>
  * <tr>
  * <td><b>Examine</b></td>
  * <td><em>not applicable</em></td>
  * <td><em>not applicable</em></td>
  * <td><em>not applicable</em></td>
- * <td>{@link #peek(long, java.util.concurrent.TimeUnit) peek(time, unit)}</td>>
+ * <td>{@link #peek(long, TimeUnit) peek(time, unit)}</td>>
  * </tr>
  * </table>
  * <p>
@@ -125,7 +125,7 @@ import java.util.concurrent.TimeoutException;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">...</a>
  * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -203,7 +203,7 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
         // volatile read
         final int readLocation = this.readLocation;
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
         final int nextReadLocation = blockForReadSpace(readLocation);
 
         // purposely not volatile as the read memory barrier occurred above when we read 'writeLocation'
@@ -227,7 +227,7 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
      */
 
     public byte peek(long timeout, TimeUnit unit)
-            throws InterruptedException, TimeoutException {
+            throws TimeoutException {
 
         final int readLocation = this.readLocation;
 
@@ -258,8 +258,8 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
         // we want to minimize the number of volatile reads, so we read the writeLocation just once.
         final int writeLocation = this.writeLocation;
 
-        // sets the nextWriteLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextWriteLocation = (writeLocation + 1 == capacity) ? 0 : writeLocation + 1;
+        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextWriteLocation = (writeLocation + 1) % capacity;
 
         if (nextWriteLocation == capacity - 1) {
 
@@ -281,11 +281,8 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
      * for space to become available.
      *
      * @param value the element to add
-     * @throws InterruptedException     if interrupted while waiting
-     * @throws IllegalArgumentException if some property of the specified
-     *                                  element prevents it from being added to this queue
      */
-    public void put(byte value) throws InterruptedException {
+    public void put(byte value) {
 
         final int writeLocation1 = this.writeLocation;
         final int nextWriteLocation = blockForWriteSpace(writeLocation1);
@@ -307,21 +304,14 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
      *                <tt>timeout</tt> parameter
      * @return <tt>true</tt> if successful, or <tt>false</tt> if
      * the specified waiting time elapses before space is available
-     * @throws InterruptedException     if interrupted while waiting
-     * @throws ClassCastException       if the class of the specified element
-     *                                  prevents it from being added to this queue
-     * @throws NullPointerException     if the specified element is null
-     * @throws IllegalArgumentException if some property of the specified
-     *                                  element prevents it from being added to this queue
      */
-    public boolean offer(byte value, long timeout, TimeUnit unit)
-            throws InterruptedException {
+    public boolean offer(byte value, long timeout, TimeUnit unit) {
 
         // we want to minimize the number of volatile reads, so we read the writeLocation just once.
         final int writeLocation = this.writeLocation;
 
-        // sets the nextWriteLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextWriteLocation = (writeLocation + 1 == capacity) ? 0 : writeLocation + 1;
+        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextWriteLocation = (writeLocation + 1) % capacity;
 
 
         if (nextWriteLocation == capacity - 1) {
@@ -332,7 +322,7 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
             // this condition handles the case where writer has caught up with the read,
             // we will wait for a read, ( which will cause a change on the read location )
             {
-                if (!blockAtAdd(timeoutAt))
+                if (timeAvailable(timeoutAt))
                     return false;
             }
 
@@ -344,7 +334,7 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
             // this condition handles the case general case where the read is at the start of the backing array and we are at the end,
             // blocks as our backing array is full, we will wait for a read, ( which will cause a change on the read location )
             {
-                if (!blockAtAdd(timeoutAt))
+                if (timeAvailable(timeoutAt))
                     return false;
             }
         }
@@ -369,11 +359,10 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
      *                <tt>timeout</tt> parameter
      * @return the head of this queue, or throws a <tt>TimeoutException</tt> if the
      * specified waiting time elapses before an element is available
-     * @throws InterruptedException                  if interrupted while waiting
      * @throws java.util.concurrent.TimeoutException if timeout time is exceeded
      */
     public byte poll(long timeout, TimeUnit unit)
-            throws InterruptedException, TimeoutException {
+            throws TimeoutException {
 
         final int readLocation = this.readLocation;
         int nextReadLocation = blockForReadSpace(timeout, unit, readLocation);
@@ -413,8 +402,8 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
             if (o == data[readLocation])
                 return true;
 
-            // sets the readLocation my moving it on by 1, this may cause it it wrap back to the start.
-            readLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+            // sets the readLocation my moving it on by 1, this may cause it to wrap back to the start.
+            readLocation = (readLocation + 1) % capacity;
 
         }
 
@@ -498,8 +487,8 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
             }
 
 
-            // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
-            readLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+            // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
+            readLocation = (readLocation + 1) % capacity;
 
             // purposely not volatile as the read memory barrier occurred above when we read 'writeLocation'
             target[i] = data[readLocation];
@@ -512,5 +501,4 @@ public class ConcurrentBlockingByteQueue extends AbstractBlockingQueue {
         return maxElements;
     }
 }
-
 

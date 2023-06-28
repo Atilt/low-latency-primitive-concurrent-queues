@@ -39,12 +39,8 @@ public class ConcurrentBlockingObjectQueueTest {
             @Override
             public void run() {
                 final int value;
-                try {
-                    value = queue.take();
-                    actual.add(value);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                value = queue.take();
+                actual.add(value);
 
             }
         });
@@ -56,7 +52,7 @@ public class ConcurrentBlockingObjectQueueTest {
 
 
     @Test
-    public void testWrite() throws Exception {
+    public void testWrite() {
 
     }
 
@@ -277,19 +273,15 @@ public class ConcurrentBlockingObjectQueueTest {
                         for (int i = 1; i < nTimes; i++) {
 
                             final int newValue;
-                            try {
-                                newValue = queue.take();
+                            newValue = queue.take();
 
 
-                                if (newValue != value + 1) {
-                                    success.set(false);
-                                    return;
-                                }
-
-                                value = newValue;
-                            } catch (InterruptedException e) {
-                                e.printStackTrace();
+                            if (newValue != value + 1) {
+                                success.set(false);
+                                return;
                             }
+
+                            value = newValue;
 
                         }
                         countDown.countDown();
@@ -381,7 +373,7 @@ public class ConcurrentBlockingObjectQueueTest {
 
 
     @Test
-    public void testLatency() throws NoSuchFieldException, InterruptedException {
+    public void testLatency() throws InterruptedException {
 
 
         for (int pwr = 2; pwr < 20; pwr++) {

@@ -97,7 +97,7 @@ public abstract class BlockingQueueTest extends JSR166TestCase {
     /**
      * put(null) throws NullPointerException
      */
-    public void testAddAllNull() throws InterruptedException {
+    public void testAddAllNull() {
         final Collection q = emptyCollection();
         try {
             q.addAll(null);
@@ -125,7 +125,7 @@ public abstract class BlockingQueueTest extends JSR166TestCase {
     public void testToArray_NullArray() {
         final Collection q = emptyCollection();
         try {
-            q.toArray(null);
+            q.toArray((Object[]) null);
             shouldThrow();
         } catch (NullPointerException success) {
         }

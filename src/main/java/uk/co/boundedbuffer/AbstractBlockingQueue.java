@@ -14,7 +14,7 @@ import java.util.concurrent.TimeoutException;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">...</a>
  * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -40,8 +40,8 @@ class AbstractBlockingQueue {
                     (AbstractBlockingQueue.class.getDeclaredField("readLocation"));
             WRITE_LOCATION_OFFSET = unsafe.objectFieldOffset
                     (AbstractBlockingQueue.class.getDeclaredField("writeLocation"));
-        } catch (Exception e) {
-            throw new AssertionError(e);
+        } catch (Exception exception) {
+            throw new AssertionError(exception);
         }
     }
 
@@ -79,7 +79,7 @@ class AbstractBlockingQueue {
     void setWriteLocation(int nextWriteLocation) {
 
 
-        // putOrderedInt wont immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non volatile )
+        // putOrderedInt wont immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non-volatile )
         this.producerWriteLocation = nextWriteLocation;
 
         // the line below, is where the write memory barrier occurs,
@@ -91,7 +91,7 @@ class AbstractBlockingQueue {
 
     void setReadLocation(int nextReadLocation) {
 
-        // putOrderedInt wont immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non volatile )
+        // putOrderedInt wont immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non-volatile )
         this.consumerReadLocation = nextReadLocation;
 
         // the write memory barrier will occur here, as we are storing the nextReadLocation
@@ -124,8 +124,8 @@ class AbstractBlockingQueue {
      *
      * @param timeoutAt returns false if the timeoutAt time is reached
      */
-    boolean blockAtAdd(long timeoutAt) {
-        return timeoutAt > System.nanoTime();
+    boolean timeAvailable(long timeoutAt) {
+        return timeoutAt <= System.nanoTime();
     }
 
 
@@ -175,8 +175,8 @@ class AbstractBlockingQueue {
 
         // we want to minimize the number of volatile reads, so we read the writeLocation just once.
 
-        // sets the nextWriteLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextWriteLocation = (writeLocation + 1 == capacity) ? 0 : writeLocation + 1;
+        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextWriteLocation = (writeLocation + 1) % capacity;
 
         if (nextWriteLocation == capacity) {
 
@@ -200,8 +200,8 @@ class AbstractBlockingQueue {
 
         // we want to minimize the number of volatile reads, so we read the writeLocation just once.
 
-        // sets the nextWriteLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextWriteLocation = (writeLocation + 1 == capacity) ? 0 : writeLocation + 1;
+        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextWriteLocation = (writeLocation + 1) % capacity;
 
         if (nextWriteLocation == capacity)
 
@@ -240,8 +240,8 @@ class AbstractBlockingQueue {
 
         // we want to minimize the number of volatile reads, so we read the writeLocation just once.
 
-        // sets the nextWriteLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextWriteLocation = (writeLocation + 1 == capacity) ? 0 : writeLocation + 1;
+        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextWriteLocation = (writeLocation + 1) % capacity;
 
         if (nextWriteLocation == capacity)
 
@@ -272,8 +272,8 @@ class AbstractBlockingQueue {
      */
     int blockForReadSpace(long timeout, TimeUnit unit, int readLocation) throws TimeoutException {
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextReadLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextReadLocation = (readLocation + 1) % capacity;
 
         final long timeoutAt = System.nanoTime() + unit.toNanos(timeout);
 
@@ -296,8 +296,8 @@ class AbstractBlockingQueue {
      */
     int blockForReadSpace(int readLocation) {
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextReadLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextReadLocation = (readLocation + 1) % capacity;
 
         // in the for loop below, we are blocked reading unit another item is written, this is because we are empty ( aka size()=0)
         // inside the for loop, getting the 'writeLocation', this will serve as our read memory barrier.
@@ -316,8 +316,8 @@ class AbstractBlockingQueue {
      */
     int blockForReadSpaceThrowNoSuchElementException(int readLocation) {
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextReadLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextReadLocation = (readLocation + 1) % capacity;
 
         // in the for loop below, we are blocked reading unit another item is written, this is because we are empty ( aka size()=0)
         // inside the for loop, getting the 'writeLocation', this will serve as our read memory barrier.
@@ -352,8 +352,4 @@ class AbstractBlockingQueue {
 
         return (capacity - 1) - (writeLocation - readLocation);
     }
-
-
 }
-
-

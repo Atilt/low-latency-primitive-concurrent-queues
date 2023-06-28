@@ -200,7 +200,7 @@ public class JSR166TestCase extends TestCase {
                 thread.stop();
                 throw new AssertionFailedError
                         (String.format("Found leaked ForkJoinPool thread test=%s thread=%s%n",
-                                toString(), name));
+                                this, name));
             }
         }
     }
@@ -677,7 +677,7 @@ public class JSR166TestCase extends TestCase {
     }
 
     public abstract class RunnableShouldThrow implements Runnable {
-        protected abstract void realRun() throws Throwable;
+        protected abstract void realRun();
 
         final Class<?> exceptionClass;
 
@@ -697,7 +697,7 @@ public class JSR166TestCase extends TestCase {
     }
 
     public abstract class ThreadShouldThrow extends Thread {
-        protected abstract void realRun() throws Throwable;
+        protected abstract void realRun();
 
         final Class<?> exceptionClass;
 
@@ -746,15 +746,13 @@ public class JSR166TestCase extends TestCase {
 
     public abstract class CheckedInterruptedCallable<T>
             implements Callable<T> {
-        protected abstract T realCall() throws Throwable;
+        protected abstract T realCall();
 
         public final T call() {
             try {
                 T result = realCall();
                 threadShouldThrow("InterruptedException");
                 return result;
-            } catch (InterruptedException success) {
-                threadAssertFalse(Thread.interrupted());
             } catch (Throwable t) {
                 threadUnexpectedException(t);
             }
@@ -795,7 +793,7 @@ public class JSR166TestCase extends TestCase {
 
     public Runnable awaiter(final CountDownLatch latch) {
         return new CheckedRunnable() {
-            public void realRun() throws InterruptedException {
+            public void realRun() {
                 await(latch);
             }
         };
@@ -1027,7 +1025,7 @@ public class JSR166TestCase extends TestCase {
      * Analog of CheckedRunnable for RecursiveAction
      */
     public abstract class CheckedRecursiveAction extends RecursiveAction {
-        protected abstract void realCompute() throws Throwable;
+        protected abstract void realCompute();
 
         @Override
         protected final void compute() {
@@ -1043,7 +1041,7 @@ public class JSR166TestCase extends TestCase {
      * Analog of CheckedCallable for RecursiveTask
      */
     public abstract class CheckedRecursiveTask<T> extends RecursiveTask<T> {
-        protected abstract T realCompute() throws Throwable;
+        protected abstract T realCompute();
 
         @Override
         protected final T compute() {

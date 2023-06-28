@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException;
 
 /**
  * A low latency, lock free, Object bounded blocking queue backed by an Object[].
- * Unlike the other classes in this package thi class implements {@linkplain java.util.concurrent.BlockingQueue BlockingQueue},
+ * Unlike the other classes in this package thi class implements {@linkplain BlockingQueue BlockingQueue},
  * <p>
  * This class takes advantage of the Unsafe.putOrderedObject, which allows us to create non-blocking code with guaranteed writes.
  * These writes will not be re-ordered by instruction reordering. Under the covers it uses the faster store-store barrier, rather than the the slower store-load barrier, which is used when doing a volatile write.
@@ -55,21 +55,21 @@ import java.util.concurrent.TimeoutException;
  * <td>{@link #add add(e)}</td>
  * <td>{@link #offer offer(e)}</td>
  * <td>{@link #put put(e)}</td>
- * <td>{@link #offer(E, long, java.util.concurrent.TimeUnit) offer(e, time, unit)}</td>
+ * <td>{@link #offer(E, long, TimeUnit) offer(e, time, unit)}</td>
  * </tr>
  * <tr>
  * <td><b>Remove</b></td>
  * <td>{@link #poll poll()}</td>
  * <td>not applicable</td>
  * <td>{@link #take long()}</td>
- * <td>{@link #poll(long, java.util.concurrent.TimeUnit) poll(time, unit)}</td>
+ * <td>{@link #poll(long, TimeUnit) poll(time, unit)}</td>
  * </tr>
  * <tr>
  * <td><b>Examine</b></td>
  * <td><em>not applicable</em></td>
  * <td><em>not applicable</em></td>
  * <td><em>not applicable</em></td>
- * <td>{@link #peek(long, java.util.concurrent.TimeUnit) peek(time, unit)}</td>>
+ * <td>{@link #peek(long, TimeUnit) peek(time, unit)}</td>>
  * </tr>
  * </table>
  * <p>
@@ -129,7 +129,7 @@ import java.util.concurrent.TimeoutException;
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  * <p>
- * http://www.apache.org/licenses/LICENSE-2.0
+ * <a href="http://www.apache.org/licenses/LICENSE-2.0">...</a>
  * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -160,18 +160,10 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
         super(capacity);
     }
 
-    public ConcurrentBlockingObjectQueue(int capacity, boolean b) {
-        super(capacity);
-    }
-
-
-    public ConcurrentBlockingObjectQueue(int capacity, boolean b, Collection<Integer> elements) {
-        super(capacity);
-    }
-
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean add(E value) {
 
         // volatile read
@@ -193,14 +185,14 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      * the reads must always occur on the same thread
      *
      * @return the head of this queue
-     * @throws InterruptedException if interrupted while waiting
      */
-    public E take() throws InterruptedException {
+    @Override
+    public E take() {
 
-        // non volatile read  ( which is quicker )
+        // non-volatile read  ( which is quicker )
         final int readLocation = this.consumerReadLocation;
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
         final int nextReadLocation = blockForReadSpace(readLocation);
 
         // purposely not volatile as the read memory barrier occurred above when we read 'writeLocation'
@@ -224,9 +216,9 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      */
 
     public E peek(long timeout, TimeUnit unit)
-            throws InterruptedException, TimeoutException {
+            throws TimeoutException {
 
-        // non volatile read  ( which is quicker )
+        // non-volatile read  ( which is quicker )
         final int readLocation = this.consumerReadLocation;
 
         blockForReadSpace(timeout, unit, readLocation);
@@ -239,13 +231,14 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
     /**
      * {@inheritDoc}
      */
+    @Override
     public boolean offer(E value) {
 
-        // non volatile read  ( which is quicker )
+        // non-volatile read  ( which is quicker )
         final int writeLocation = this.producerWriteLocation;
 
-        // sets the nextWriteLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextWriteLocation = (writeLocation + 1 == capacity) ? 0 : writeLocation + 1;
+        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextWriteLocation = (writeLocation + 1) % capacity;
 
         if (nextWriteLocation == capacity) {
 
@@ -272,6 +265,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      * @throws IllegalArgumentException if some property of the specified
      *                                  element prevents it from being added to this queue
      */
+    @Override
     public void put(E value) throws InterruptedException {
 
         final int writeLocation1 = this.producerWriteLocation;
@@ -294,21 +288,14 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      *                <tt>timeout</tt> parameter
      * @return <tt>true</tt> if successful, or <tt>false</tt> if
      * the specified waiting time elapses before space is available
-     * @throws InterruptedException     if interrupted while waiting
-     * @throws ClassCastException       if the class of the specified element
-     *                                  prevents it from being added to this queue
-     * @throws NullPointerException     if the specified element is null
-     * @throws IllegalArgumentException if some property of the specified
-     *                                  element prevents it from being added to this queue
      */
-    public boolean offer(E value, long timeout, TimeUnit unit)
-            throws InterruptedException {
+    public boolean offer(E value, long timeout, TimeUnit unit) {
 
-        // non volatile read  ( which is quicker )
+        // non-volatile read  ( which is quicker )
         final int writeLocation = this.producerWriteLocation;
 
-        // sets the nextWriteLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextWriteLocation = (writeLocation + 1 == capacity) ? 0 : writeLocation + 1;
+        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextWriteLocation = (writeLocation + 1) % capacity;
 
 
         if (nextWriteLocation == capacity) {
@@ -319,7 +306,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
             // this condition handles the case where writer has caught up with the read,
             // we will wait for a read, ( which will cause a change on the read location )
             {
-                if (!blockAtAdd(timeoutAt))
+                if (timeAvailable(timeoutAt))
                     return false;
             }
 
@@ -331,7 +318,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
             // this condition handles the case general case where the read is at the start of the backing array and we are at the end,
             // blocks as our backing array is full, we will wait for a read, ( which will cause a change on the read location )
             {
-                if (!blockAtAdd(timeoutAt))
+                if (timeAvailable(timeoutAt))
                     return false;
             }
         }
@@ -356,21 +343,18 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      *                <tt>timeout</tt> parameter
      * @return the head of this queue, or throws a <tt>TimeoutException</tt> if the
      * specified waiting time elapses before an element is available
-     * @throws InterruptedException                  if interrupted while waiting
-     * @throws java.util.concurrent.TimeoutException if timeout time is exceeded
      */
-    public E poll(long timeout, TimeUnit unit)
-            throws InterruptedException {
+    public E poll(long timeout, TimeUnit unit) {
 
         final int readLocation = this.consumerReadLocation;
-        int nextReadLocation = 0;
+        int nextReadLocation;
         try {
             nextReadLocation = blockForReadSpace(timeout, unit, readLocation);
         } catch (TimeoutException e) {
             return null;
         }
 
-        // purposely non volatile as the read memory barrier occurred when we read 'writeLocation'
+        // purposely non-volatile as the read memory barrier occurred when we read 'writeLocation'
         final E value = data[readLocation];
         setReadLocation(nextReadLocation);
 
@@ -389,8 +373,8 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
 
         final int readLocation = this.consumerReadLocation;
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextReadLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextReadLocation = (readLocation + 1) % capacity;
 
         if (writeLocation == readLocation)
             return null;
@@ -639,7 +623,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
 
         final E[] objects = (E[]) toArray();
 
-        return new Iterator<E>() {
+        return new Iterator<>() {
 
             int i = 0;
 
@@ -723,7 +707,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
         }
 
         if (i < result.length - 1) {
-            Arrays.fill((Object[]) result, i, result.length, null);
+            Arrays.fill(result, i, result.length, null);
         }
 
         // fill with null
@@ -746,10 +730,10 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
     @Override
     public E remove() {
 
-        // non volatile read  ( which is quicker )
+        // non-volatile read  ( which is quicker )
         final int readLocation = this.consumerReadLocation;
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
         final int nextReadLocation = blockForReadSpaceThrowNoSuchElementException(readLocation);
 
         // purposely not volatile as the read memory barrier occurred above when we read 'writeLocation'
@@ -767,8 +751,8 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
 
         final int readLocation = this.consumerReadLocation;
 
-        // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
-        final int nextReadLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+        // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
+        final int nextReadLocation = (readLocation + 1) % capacity;
 
         if (writeLocation == readLocation)
             throw new NoSuchElementException();
@@ -892,7 +876,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      */
     int drainTo(E[] target, int maxElements) {
 
-        // non volatile read  ( which is quicker )
+        // non-volatile read  ( which is quicker )
         int readLocation = this.consumerReadLocation;
 
         int i = 0;
@@ -917,8 +901,8 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
             }
 
 
-            // sets the nextReadLocation my moving it on by 1, this may cause it it wrap back to the start.
-            readLocation = (readLocation + 1 == capacity) ? 0 : readLocation + 1;
+            // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
+            readLocation = (readLocation + 1) % capacity;
 
             // purposely not volatile as the read memory barrier occurred above when we read 'writeLocation'
             target[i] = data[readLocation];
@@ -965,5 +949,4 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
 
     }
 }
-
 
