@@ -30,7 +30,7 @@
         however works with primitive ints rather than objects, so is unable to actually implement the
         BlockingQueue.
 
-        This class takes advantage of the Unsafe.putOrderedObject, which allows us to create non-blocking code
+        This class takes advantage of VarHandles, which allows us to create non-blocking code
         with
         guaranteed writes.
         These writes will not be re-orderd by instruction reordering. Under the covers it uses the faster

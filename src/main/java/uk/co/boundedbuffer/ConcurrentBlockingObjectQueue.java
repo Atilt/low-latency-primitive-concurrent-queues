@@ -137,7 +137,7 @@ import java.util.concurrent.TimeoutException;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @author Rob Austin
+ * @author Rob Austin, Atilt
  * @since 1.1
  */
 public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue implements BlockingQueue<E> {

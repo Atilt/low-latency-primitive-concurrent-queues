@@ -1,8 +1,7 @@
 package uk.co.boundedbuffer;
 
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.NoSuchElementException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -22,25 +21,20 @@ import java.util.concurrent.TimeoutException;
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * @author Rob Austin
+ * @author Rob Austin, Atilt
  * @since 1.1
  */
 class AbstractBlockingQueue {
 
-    private static final long READ_LOCATION_OFFSET;
-    private static final long WRITE_LOCATION_OFFSET;
-    private static final Unsafe unsafe;
+    private static final VarHandle READ_LOCATION_OFFSET;
+    private static final VarHandle WRITE_LOCATION_OFFSET;
 
     static {
+        MethodHandles.Lookup lookup = MethodHandles.lookup();
         try {
-            final Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            unsafe = (Unsafe) field.get(null);
-            READ_LOCATION_OFFSET = unsafe.objectFieldOffset
-                    (AbstractBlockingQueue.class.getDeclaredField("readLocation"));
-            WRITE_LOCATION_OFFSET = unsafe.objectFieldOffset
-                    (AbstractBlockingQueue.class.getDeclaredField("writeLocation"));
-        } catch (Exception exception) {
+            READ_LOCATION_OFFSET = lookup.findVarHandle(AbstractBlockingQueue.class, "readLocation", int.class);
+            WRITE_LOCATION_OFFSET = lookup.findVarHandle(AbstractBlockingQueue.class, "writeLocation", int.class);
+        } catch (NoSuchFieldException | IllegalAccessException exception) {
             throw new AssertionError(exception);
         }
     }
@@ -76,7 +70,7 @@ class AbstractBlockingQueue {
     }
 
 
-    void setWriteLocation(int nextWriteLocation) {
+    void setWriteLocation(final int nextWriteLocation) {
 
 
         // putOrderedInt wont immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non-volatile )
@@ -85,17 +79,21 @@ class AbstractBlockingQueue {
         // the line below, is where the write memory barrier occurs,
         // we have just written back the data in the line above ( which is not require to have a memory barrier as we will be doing that in the line below
 
+        //Pre Java 9
+        //unsafe.putOrderedInt(this, WRITE_LOCATION_OFFSET, nextWriteLocation);
+
         // write back the next write location
-        unsafe.putOrderedInt(this, WRITE_LOCATION_OFFSET, nextWriteLocation);
+        WRITE_LOCATION_OFFSET.setRelease(this, nextWriteLocation);
     }
 
-    void setReadLocation(int nextReadLocation) {
+    void setReadLocation(final int nextReadLocation) {
 
         // putOrderedInt wont immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non-volatile )
         this.consumerReadLocation = nextReadLocation;
 
         // the write memory barrier will occur here, as we are storing the nextReadLocation
-        unsafe.putOrderedInt(this, READ_LOCATION_OFFSET, nextReadLocation);
+        READ_LOCATION_OFFSET.setRelease(this, nextReadLocation);
+        //unsafe.putOrderedInt(this, READ_LOCATION_OFFSET, nextReadLocation);
     }
 
     /**

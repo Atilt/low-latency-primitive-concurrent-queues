@@ -7,7 +7,7 @@ import java.util.concurrent.TimeoutException;
  * A low latency, lock free, primitive bounded blocking queue backed by an long[]. This class mimics the
  * interface of {@linkplain java.util.concurrent.BlockingQueue BlockingQueue}, however works with primitive
  * longs rather than {@link Object}s, so is unable to actually implement the BlockingQueue . <p> This class
- * takes advantage of the Unsafe.putOrderedInt, which allows us to create non-blocking code with guaranteed
+ * takes advantage of VarHandles.setRelease, which allows us to create non-blocking code with guaranteed
  * writes. These writes will not be re-ordered by instruction reordering. Under the covers it uses the faster
  * store-store barrier, rather than the the slower store-load barrier, which is used when doing a volatile
  * write. One of the trade off with this improved performance is we are limited to a single producer, single
@@ -74,7 +74,7 @@ import java.util.concurrent.TimeoutException;
  * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language
  * governing permissions and limitations under the License.
  *
- * @author Rob Austin
+ * @author Rob Austin, Atilt
  * @since 1.1
  */
 public class ConcurrentBlockingLongQueue extends AbstractBlockingQueue {
