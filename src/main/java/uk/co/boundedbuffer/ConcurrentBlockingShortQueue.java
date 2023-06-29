@@ -319,7 +319,7 @@ public class ConcurrentBlockingShortQueue extends AbstractBlockingQueue {
         int readLocation = this.readLocation;
         int writeLocation = this.writeLocation;
 
-        for (; ; ) {
+        for (; ;) {
 
             if (readLocation == writeLocation)
                 return false;
@@ -331,8 +331,6 @@ public class ConcurrentBlockingShortQueue extends AbstractBlockingQueue {
             readLocation = (readLocation + 1) % capacity;
 
         }
-
-
     }
 
     /**

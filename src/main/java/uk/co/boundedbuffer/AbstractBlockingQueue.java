@@ -44,7 +44,7 @@ class AbstractBlockingQueue {
     // only set and read by the producer thread, ( that the thread that's calling put(), offer() or add() )
     int producerWriteLocation;
 
-    // only set and read by the comumer thread, ( that the thread that's calling get(), poll() or peek() )
+    // only set and read by the consumer thread, ( that the thread that's calling get(), poll() or peek() )
     int consumerReadLocation;
 
     // we set volatiles here, for the writes we use putOrderedInt ( as this is quicker ),
@@ -56,8 +56,9 @@ class AbstractBlockingQueue {
      * @param capacity Creates an BlockingQueue with the given (fixed) capacity
      */
     public AbstractBlockingQueue(int capacity) {
-        if (capacity == 0)
+        if (capacity == 0) {
             throw new IllegalArgumentException();
+        }
         this.capacity = capacity + 1;
     }
 
@@ -88,7 +89,7 @@ class AbstractBlockingQueue {
 
     void setReadLocation(final int nextReadLocation) {
 
-        // putOrderedInt wont immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non-volatile )
+        // putOrderedInt won't immediately make the updates available, even on this thread, so will update the field so the change is immediately visible to, at least this thread. ( note the field is non-volatile )
         this.consumerReadLocation = nextReadLocation;
 
         // the write memory barrier will occur here, as we are storing the nextReadLocation
@@ -134,14 +135,11 @@ class AbstractBlockingQueue {
      * @return an approximation of the size
      */
     public int size() {
-        int read = readLocation;
-        int write = writeLocation;
-
-        if (write < read)
-            write += capacity;
-
-        return write - read;
-
+        int size = this.readLocation - this.writeLocation;
+        if (size < 0) {
+            size += capacity;
+        }
+        return size;
     }
 
 
@@ -241,20 +239,20 @@ class AbstractBlockingQueue {
         // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
         final int nextWriteLocation = (writeLocation + 1) % capacity;
 
-        if (nextWriteLocation == capacity)
+        if (nextWriteLocation == this.capacity) {
 
-            while (readLocation == 0)
+            while (this.readLocation == 0) {
                 // // this condition handles the case where writer has caught up with the read,
                 // we will wait for a read, ( which will cause a change on the read location )
                 blockAtAdd();
-
-        else
-
-
-            while (nextWriteLocation == readLocation)
+            }
+        } else {
+            while (nextWriteLocation == readLocation) {
                 // this condition handles the case general case where the read is at the start of the backing array and we are at the end,
                 // blocks as our backing array is full, we will wait for a read, ( which will cause a change on the read location )
                 blockAtAdd();
+            }
+        }
 
         return nextWriteLocation;
     }
@@ -278,9 +276,11 @@ class AbstractBlockingQueue {
         // in the for loop below, we are blocked reading unit another item is written, this is because we are empty ( aka size()=0)
         // inside the for loop, getting the 'writeLocation', this will serve as our read memory barrier.
 
-        while (writeLocation == readLocation)
-            if (!blockAtTake(timeoutAt))
+        while (this.writeLocation == readLocation) {
+            if (!blockAtTake(timeoutAt)) {
                 throw new TimeoutException();
+            }
+        }
 
         return nextReadLocation;
     }
@@ -295,12 +295,13 @@ class AbstractBlockingQueue {
     int blockForReadSpace(int readLocation) {
 
         // sets the nextReadLocation my moving it on by 1, this may cause it to wrap back to the start.
-        final int nextReadLocation = (readLocation + 1) % capacity;
+        final int nextReadLocation = (readLocation + 1) % this.capacity;
 
         // in the for loop below, we are blocked reading unit another item is written, this is because we are empty ( aka size()=0)
         // inside the for loop, getting the 'writeLocation', this will serve as our read memory barrier.
-        while (writeLocation == readLocation)
+        while (this.writeLocation == readLocation) {
             blockAtTake();
+        }
 
         return nextReadLocation;
     }
@@ -319,8 +320,9 @@ class AbstractBlockingQueue {
 
         // in the for loop below, we are blocked reading unit another item is written, this is because we are empty ( aka size()=0)
         // inside the for loop, getting the 'writeLocation', this will serve as our read memory barrier.
-        while (writeLocation == readLocation)
+        while (writeLocation == readLocation) {
             throw new NoSuchElementException();
+        }
 
         return nextReadLocation;
     }

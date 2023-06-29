@@ -143,14 +143,14 @@ import java.util.concurrent.TimeoutException;
 public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue implements BlockingQueue<E> {
 
     // intentionally not volatile, as we are carefully ensuring that the memory barriers are controlled below by other objects
-    private final E[] data = (E[]) new Object[capacity];
-
+    private final E[] data;
 
     /**
      * Creates an BlockingQueue with the default capacity of 1024
      */
     public ConcurrentBlockingObjectQueue() {
-
+        super();
+        this.data = (E[]) new Object[this.capacity];
     }
 
     /**
@@ -158,6 +158,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      */
     public ConcurrentBlockingObjectQueue(int capacity) {
         super(capacity);
+        this.data = (E[]) new Object[capacity];
     }
 
     /**
@@ -233,24 +234,14 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
      */
     @Override
     public boolean offer(E value) {
-
-        // non-volatile read  ( which is quicker )
         final int writeLocation = this.producerWriteLocation;
-
-        // sets the nextWriteLocation my moving it on by 1, this may cause it to wrap back to the start.
         final int nextWriteLocation = (writeLocation + 1) % capacity;
 
-        if (nextWriteLocation == capacity) {
-
-            if (readLocation == 0)
-                return false;
-
-        } else if (nextWriteLocation == readLocation)
+        if ((nextWriteLocation == this.capacity && this.readLocation == 0) || nextWriteLocation == this.readLocation) {
             return false;
+        }
 
-        // purposely not volatile see the comment below
         data[writeLocation] = value;
-
         setWriteLocation(nextWriteLocation);
         return true;
     }
@@ -737,7 +728,7 @@ public class ConcurrentBlockingObjectQueue<E> extends AbstractBlockingQueue impl
         final int nextReadLocation = blockForReadSpaceThrowNoSuchElementException(readLocation);
 
         // purposely not volatile as the read memory barrier occurred above when we read 'writeLocation'
-        final E value = data[readLocation];
+        final E value = this.data[readLocation];
 
         setReadLocation(nextReadLocation);
 
